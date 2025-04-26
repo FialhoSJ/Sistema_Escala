@@ -1,0 +1,57 @@
+.admin-container{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 48px;
+}
+
+.admin-container h1{
+    margin-bottom: 28px;
+}
+
+.list{
+    width: 90%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    background-color: rgb(18, 18, 18, 0.38);
+    border-radius: 4px;
+    margin-bottom: 12px;
+    justify-content: center;
+    padding: 14px 8px;
+}
+
+.list p {
+    margin-bottom: 8px;
+}
+
+.list button{
+    margin-right: 8px;
+    border: 0;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+.btn-concluir{
+    color: yellow;
+    background-color: transparent;
+}
+
+.btn-logout{
+    position: absolute;
+    bottom: 6%;
+    left: 4%;
+    height: 60px;
+    width: 60px;
+    border-radius: 30px;
+    border: 0;
+    font-weight: bold;
+    background-color: rgba(177, 2, 2, 0.616);
+    color: #fafafa;
+    transition: all 0.5s ease;
+}
+
+.btn-logout:hover{
+    background-color: rgba(253, 3, 3, 0.87);
+    color: #fff;
+}
