@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { db } from '../../firebaseConnection';
 import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth';
@@ -10,6 +12,8 @@ export default function Escala() {
   const [baseSelecionada, setBaseSelecionada] = useState('Base Antônio Lemos (Breves) - 1 Quinzena');
   const [escalas, setEscalas] = useState({});
   const [usuario, setUsuario] = useState(null);
+  const [ferias, setFerias] = useState([]);
+
 
   const bases = [
     'Base Antônio Lemos (Breves) - 1 Quinzena',
@@ -27,13 +31,15 @@ export default function Escala() {
         setUsuario(user);
         carregarServidores();
         carregarEscalas();
+        carregarFerias(); // <-- adiciona aqui
       } else {
         console.error('Usuário não autenticado.');
         alert('Você precisa estar autenticado para acessar os dados.');
-        realizarLogin(); // Chama o fluxo de login
+        realizarLogin();
       }
     });
   }, []);
+  
 
   async function realizarLogin() {
     const auth = getAuth();
@@ -51,6 +57,22 @@ export default function Escala() {
       alert('Erro ao realizar login. Verifique suas credenciais.');
     }
   }
+
+  async function carregarFerias() {
+    try {
+      const snapshot = await getDocs(collection(db, 'ferias'));
+      const lista = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        lista.push({ id: doc.id, ...data });
+      });
+      console.log('Férias carregadas:', lista); // Depuração
+      setFerias(lista);
+    } catch (error) {
+      console.error('Erro ao carregar férias:', error);
+    }
+  }
+  
 
   async function carregarServidores() {
     try {
@@ -91,15 +113,29 @@ export default function Escala() {
     if (!servidorSelecionado || !data) {
       return alert('Preencha todos os campos.');
     }
-
+  
+    // Verificar se o servidor está de férias na data selecionada
+    const feriasServidor = ferias.find(f => f.nome === servidorSelecionado);
+  
+    if (feriasServidor) {
+      const inicio = new Date(feriasServidor.inicio);
+      const fim = new Date(feriasServidor.fim);
+      const dataSelecionada = new Date(data);
+  
+      if (dataSelecionada >= inicio && dataSelecionada <= fim) {
+        alert('Este servidor está de férias nesta data e não pode ser adicionado na escala.');
+        return;
+      }
+    }
+  
     try {
       await addDoc(collection(db, 'escalas'), {
         nome: servidorSelecionado,
         data,
         base: baseSelecionada,
-        userUid: usuario.uid // Adiciona o UID do usuário autenticado
+        userUid: usuario.uid
       });
-
+  
       setServidorSelecionado('');
       setData('');
       carregarEscalas();
@@ -107,7 +143,7 @@ export default function Escala() {
       console.error('Erro ao adicionar servidor:', error);
     }
   }
-
+  
   async function removerServidor(id) {
     try {
       await deleteDoc(doc(db, 'escalas', id));
@@ -154,6 +190,42 @@ export default function Escala() {
 
         <button onClick={adicionarServidor}>Adicionar</button>
         <button className="danger" onClick={() => setEscalas({})}>Limpar Tudo (visual)</button>
+        <button onClick={() => {
+          const doc = new jsPDF();
+
+          doc.setFontSize(18);
+          doc.text('Escalas de Viagens', 14, 20);
+
+          let y = 30; // Começa um pouco mais embaixo pra dar espaço
+
+          for (const base in escalas) {
+            doc.setFontSize(14);
+            doc.text(base, 14, y);
+            y += 6;
+
+            const tableData = escalas[base].map(item => [
+              item.nome,
+              item.data ? item.data.split('-').reverse().join('/') : ''
+            ]);
+
+            autoTable(doc, {
+              head: [['Nome', 'Data']],
+              body: tableData,
+              startY: y,
+              styles: { fontSize: 10 },
+              headStyles: { fillColor: [41, 128, 185] }, 
+              margin: { left: 14, right: 14 },
+              theme: 'striped', 
+            });
+
+            y = doc.lastAutoTable.finalY + 10; // Começa depois da tabela
+          }
+
+          doc.save('escalas.pdf');
+        }}>
+          Gerar PDF
+        </button>
+
       </div>
 
       <div className="main">

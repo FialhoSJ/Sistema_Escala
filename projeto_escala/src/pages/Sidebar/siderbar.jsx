@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { FaHome, FaBullhorn, FaUserCog, FaUserPlus } from 'react-icons/fa';
+import { FaHome, FaBullhorn, FaUserCog, FaUmbrellaBeach } from 'react-icons/fa';
 
 export default function Sidebar() {
   const navigate = useNavigate();
@@ -41,6 +41,13 @@ export default function Sidebar() {
         onClick={() => navigate('/cadastro')}
       >
         <FaUserCog style={{ marginRight: '10px' }} /> Cadastro
+      </button>
+      
+      <button 
+        style={buttonStyle} 
+        onClick={() => navigate('/ferias')}
+      >
+        <FaUmbrellaBeach style={{ marginRight: '10px' }} /> Férias
       </button>
 
     </div>

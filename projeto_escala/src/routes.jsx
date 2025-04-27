@@ -7,6 +7,8 @@ import Private from "./private";
 import Cadastro from "./pages/CadastroEscala/cadastro";
 import Escala from "./pages/EscalaViagens/escala";
 import Sidebar from "./pages/Sidebar/siderbar";
+import Estatisticas from "./pages/Estatisticas/estatisticas";
+import Ferias from "./pages/Ferias/listaferias";
 
 function RoutesApp() {
     const location = useLocation(); // pega a rota atual
@@ -20,6 +22,8 @@ function RoutesApp() {
                 <Route path="/register" element={<Register />} />
                 <Route path="/cadastro" element={<Cadastro />} />
                 <Route path="/escala" element={<Escala />} />
+                <Route path="/estatisticas" element={<Estatisticas />} />
+                <Route path="/ferias" element={<Ferias />} />
                 <Route path="/admin" element={<Private><Admin /></Private>} />
             </Routes>
         </>
