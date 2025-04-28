@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../firebaseConnection';
-import { collection, getDocs, addDoc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import "./listaferias.css"; // Arquivo CSS externo
-import Sidebar from '../Sidebar/siderbar'; // Certifique-se de importar a sidebar corretamente
+import "./listaferias.css";
+import Sidebar from '../Sidebar/siderbar';
 import { getAuth } from 'firebase/auth';
 
 export default function Ferias() {
   const [ferias, setFerias] = useState([]);
-  const [servidores, setServidores] = useState([]); // Estado para armazenar os servidores
+  const [servidores, setServidores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Estados para o formulário de cadastro
+  // Estados para o formulário
   const [servidorSelecionado, setServidorSelecionado] = useState('');
   const [inicio, setInicio] = useState('');
   const [fim, setFim] = useState('');
@@ -29,40 +29,28 @@ export default function Ferias() {
       setServidores(lista);
     } catch (error) {
       console.error('Erro ao carregar servidores:', error);
+      setError('Erro ao carregar servidores.');
     }
   }
 
   // Função para carregar férias
   async function carregarFerias() {
     try {
-      const feriasRef = collection(db, 'ferias');
-      const q = query(feriasRef, orderBy('inicio', 'desc'));
-      const querySnapshot = await getDocs(q);
-
-      const feriasArray = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          nome: data.nome || 'Desconhecido',
-          inicio: data.inicio?.toDate() || null,
-          fim: data.fim?.toDate() || null
-        };
-      });
-
-      setFerias(feriasArray);
-      setError(null);
+      const snapshot = await getDocs(collection(db, 'ferias'));
+      const lista = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        inicio: doc.data().inicio?.toDate() || null,
+        fim: doc.data().fim?.toDate() || null
+      }));
+      setFerias(lista);
     } catch (error) {
       console.error('Erro ao carregar férias:', error);
-      setError('Erro ao carregar dados. Verifique suas permissões.');
+      setError('Erro ao carregar férias.');
     } finally {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    carregarServidores(); // Carrega os servidores ao montar o componente
-    carregarFerias(); // Carrega as férias ao montar o componente
-  }, []);
 
   // Função para cadastrar férias
   async function cadastrarFerias(e) {
@@ -81,34 +69,55 @@ export default function Ferias() {
       return;
     }
 
-    // Obter o nome do servidor selecionado
-    const servidor = servidores.find((s) => s.name === servidorSelecionado);
+    const servidor = servidores.find(s => s.name === servidorSelecionado);
 
     try {
       await addDoc(collection(db, 'ferias'), {
-        servidorId: servidorSelecionado, // ID ou nome do servidor
-        nome: servidor?.name || 'Desconhecido', // Nome do servidor
-        inicio: new Date(inicio), // Convertido para timestamp automaticamente pelo Firestore
-        fim: new Date(fim), // Convertido para timestamp automaticamente pelo Firestore
-        status: 'pendente', // Status inicial
-        userUid: user.uid, // UID do usuário autenticado
+        servidorId: servidorSelecionado,
+        nome: servidor?.name || 'Desconhecido',
+        inicio: new Date(inicio),
+        fim: new Date(fim),
+        status: 'pendente',
+        userUid: user.uid,
       });
 
       alert('Férias cadastradas com sucesso!');
       setServidorSelecionado('');
       setInicio('');
       setFim('');
-      carregarFerias(); // Atualiza a lista de férias
+      carregarFerias();
     } catch (error) {
       console.error('Erro ao cadastrar férias:', error);
       alert('Erro ao cadastrar férias. Tente novamente.');
     }
   }
 
+  // Função para remover férias
+  async function removerFerias(id) {
+    const confirmar = window.confirm('Tem certeza que deseja remover este período de férias?');
+    if (!confirmar) return;
+
+    try {
+      await deleteDoc(doc(db, 'ferias', id));
+      alert('Férias removidas com sucesso!');
+      carregarFerias();
+    } catch (error) {
+      console.error('Erro ao remover férias:', error);
+      alert('Erro ao remover férias. Tente novamente.');
+    }
+  }
+
+  // useEffect para carregar dados ao montar o componente
+  useEffect(() => {
+    carregarServidores();
+    carregarFerias();
+  }, []);
+
   if (loading) {
     return (
       <div className="loading-container">
         <div className="spinner"></div>
+        <p>Carregando...</p>
       </div>
     );
   }
@@ -116,16 +125,14 @@ export default function Ferias() {
   if (error) {
     return (
       <div className="error-container">
-        <div className="error-message">
-          <strong>Erro!</strong> {error}
-        </div>
+        <p>{error}</p>
       </div>
     );
   }
 
   return (
     <div className="container">
-      <Sidebar /> {/* Sidebar fixa */}
+      <Sidebar />
       <div className="main">
         <h2 className="ferias-title">Monitoramento de Férias</h2>
 
@@ -153,6 +160,7 @@ export default function Ferias() {
               id="inicio"
               value={inicio}
               onChange={(e) => setInicio(e.target.value)}
+              autoComplete="off"
             />
           </div>
           <div className="form-group">
@@ -162,6 +170,7 @@ export default function Ferias() {
               id="fim"
               value={fim}
               onChange={(e) => setFim(e.target.value)}
+              autoComplete="off"
             />
           </div>
           <button type="submit" className="btn">Cadastrar Férias</button>
@@ -181,6 +190,7 @@ export default function Ferias() {
                   <th>Início</th>
                   <th>Término</th>
                   <th>Duração</th>
+                  <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -193,6 +203,14 @@ export default function Ferias() {
                       {item.inicio && item.fim
                         ? `${Math.ceil((item.fim - item.inicio) / (1000 * 60 * 60 * 24))} dias`
                         : 'Dados incompletos'}
+                    </td>
+                    <td>
+                      <button
+                        className="btn btn-danger"
+                        onClick={() => removerFerias(item.id)}
+                      >
+                        Remover
+                      </button>
                     </td>
                   </tr>
                 ))}

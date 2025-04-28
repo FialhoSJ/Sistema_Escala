@@ -64,7 +64,12 @@ export default function Escala() {
       const lista = [];
       snapshot.forEach(doc => {
         const data = doc.data();
-        lista.push({ id: doc.id, ...data });
+        lista.push({
+          id: doc.id,
+          ...data,
+          inicio: data.inicio?.toDate ? data.inicio.toDate() : null, // Converter para Date
+          fim: data.fim?.toDate ? data.fim.toDate() : null // Converter para Date
+        });
       });
       console.log('Férias carregadas:', lista); // Depuração
       setFerias(lista);
@@ -113,21 +118,30 @@ export default function Escala() {
     if (!servidorSelecionado || !data) {
       return alert('Preencha todos os campos.');
     }
-  
+
     // Verificar se o servidor está de férias na data selecionada
     const feriasServidor = ferias.find(f => f.nome === servidorSelecionado);
-  
+
     if (feriasServidor) {
-      const inicio = new Date(feriasServidor.inicio);
-      const fim = new Date(feriasServidor.fim);
+      const inicio = feriasServidor.inicio;
+      const fim = feriasServidor.fim;
+
+      if (inicio instanceof Date && fim instanceof Date) {
+        alert(`Período de férias do servidor: ${inicio.toLocaleDateString()} a ${fim.toLocaleDateString()}`);
+      } else {
+        console.error('As datas de início ou fim não são válidas:', { inicio, fim });
+        alert('Erro ao carregar o período de férias. Verifique os dados.');
+        return;
+      }
+
       const dataSelecionada = new Date(data);
-  
       if (dataSelecionada >= inicio && dataSelecionada <= fim) {
         alert('Este servidor está de férias nesta data e não pode ser adicionado na escala.');
         return;
       }
     }
-  
+
+    // Adicionar o servidor à escala
     try {
       await addDoc(collection(db, 'escalas'), {
         nome: servidorSelecionado,
@@ -135,7 +149,7 @@ export default function Escala() {
         base: baseSelecionada,
         userUid: usuario.uid
       });
-  
+
       setServidorSelecionado('');
       setData('');
       carregarEscalas();
@@ -251,6 +265,6 @@ export default function Escala() {
           ))}
         </div>
       </div>
-    </div>
-  );
+    </div>
+  );
 }
